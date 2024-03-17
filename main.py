@@ -11,7 +11,12 @@ import socketserver
 
 class ScreenCapture(socketserver.BaseRequestHandler):
     def handle():
-        pass
+
+        self.request.sendall(b"HTTP/1.1 200 OK\r\n")
+        self.request.sendall(b"Content-type: multipart/x-mixed-replace; boundary=frame\r\n")
+        self.request.sendall(b"\r\n")
+
+
 
 HOST = "0.0.0.0"
 PORT = 8000
