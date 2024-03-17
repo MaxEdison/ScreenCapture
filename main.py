@@ -13,7 +13,7 @@ import pyautogui
 import io
 
 class ScreenCapture(socketserver.BaseRequestHandler):
-    def handle():
+    def handle(self):
 
         self.request.sendall(b"HTTP/1.1 200 OK\r\n")
         self.request.sendall(b"Content-type: multipart/x-mixed-replace; boundary=frame\r\n")
