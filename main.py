@@ -55,10 +55,11 @@ def start_server():
 
 def start_function():
     global httpServer
-    ScreenCapture.is_running = True
-    thread = threading.Thread(target=start_server)
-    thread.daemon = True
-    thread.start()
+    if not httpServer:
+        ScreenCapture.is_running = True
+        thread = threading.Thread(target=start_server)
+        thread.daemon = True
+        thread.start()
 
 def stop_function():
     global httpServer
