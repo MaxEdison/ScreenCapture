@@ -47,7 +47,7 @@ ifconfig
 
 ## Dependency 📦
 
-[PyAutoGUI](https://pyautogui.readthedocs.io/): Python library for automating keyboard and mouse actions. [TKinter](https://docs.python.org/3/library/tk.html): The tkinter package (“Tk interface”) is the standard Python interface to the Tcl/Tk GUI toolkit. 
+[PyAutoGUI](https://pyautogui.readthedocs.io/): Python library for automating keyboard and mouse actions. <br />[TKinter](https://docs.python.org/3/library/tk.html): The tkinter package (“Tk interface”) is the standard Python interface to the Tcl/Tk GUI toolkit. 
 
 ## Contributing 🤝
 
