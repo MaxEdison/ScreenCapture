@@ -8,6 +8,9 @@
 
 
 import socketserver
+import threading
+import pyautogui
+import io
 
 class ScreenCapture(socketserver.BaseRequestHandler):
     def handle():
@@ -21,6 +24,13 @@ class ScreenCapture(socketserver.BaseRequestHandler):
             BinImg = io.BytesIO()
             scrnsht.save(BinImg, format='JPEG')
             BinImg.seek(0)
+
+            self.request.sendall(b"--frame\r\n")
+            self.request.sendall(b"Content-type: image/jpeg\r\n")
+            self.request.sendall(f"Content-length: {len(BinImg.getvalue())}\r\n".encode())
+            self.request.sendall(b"\r\n")
+            self.request.sendall(BinImg.getvalue())
+            self.request.sendall(b"\r\n")
 
 HOST = "0.0.0.0"
 PORT = 8000
