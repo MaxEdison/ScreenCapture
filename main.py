@@ -11,15 +11,18 @@ import socketserver
 import threading
 import pyautogui
 import io
+import socket
+import tkinter as tk
 
 class ScreenCapture(socketserver.BaseRequestHandler):
-    def handle(self):
+    is_running = True
 
+    def handle(self):
         self.request.sendall(b"HTTP/1.1 200 OK\r\n")
         self.request.sendall(b"Content-type: multipart/x-mixed-replace; boundary=frame\r\n")
         self.request.sendall(b"\r\n")
 
-        while True:
+        while self.is_running:
             scrnsht = pyautogui.screenshot()
             BinImg = io.BytesIO()
             scrnsht.save(BinImg, format='JPEG')
@@ -32,9 +35,52 @@ class ScreenCapture(socketserver.BaseRequestHandler):
             self.request.sendall(BinImg.getvalue())
             self.request.sendall(b"\r\n")
 
+def get_private_ip():
+    private_ip = None
+    try:
+        private_ip = socket.gethostbyname(socket.gethostname())
+    except:
+        private_ip = 'Unable to get private IP address'
+    return private_ip
+
 HOST = "0.0.0.0"
 PORT = 8000
+httpServer = None
 
-with socketserver.ThreadingTCPServer((HOST, PORT), ScreenCapture) as httpServer:
-    print(f"Start HTTP server on {HOST}:{PORT}")
+def start_server():
+    global httpServer
+    httpServer = socketserver.ThreadingTCPServer((HOST, PORT), ScreenCapture)
+    label.config(text=f"status: HTTP server ON\nUser can connect by {get_private_ip()}:{8000}")
     httpServer.serve_forever()
+
+def start_function():
+    global httpServer
+    ScreenCapture.is_running = True
+    thread = threading.Thread(target=start_server)
+    thread.daemon = True
+    thread.start()
+
+def stop_function():
+    global httpServer
+    ScreenCapture.is_running = False
+    label.config(text=f"status: HTTP server OFF")
+    if httpServer:
+        httpServer.shutdown()
+        httpServer.server_close()
+
+root = tk.Tk()
+root['pady'] = 100
+root.title("SCREEN CAPTURE")
+root.geometry("300x500")
+root.resizable(False, False)
+
+start_button = tk.Button(root, text="Start", command=start_function, width=20, height=5)
+start_button.pack()
+
+stop_button = tk.Button(root, text="Stop", command=stop_function, width=20, height=5)
+stop_button.pack()
+
+label = tk.Label(root, text="")
+label.pack()
+
+root.mainloop()
