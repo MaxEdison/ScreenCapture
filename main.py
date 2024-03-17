@@ -16,7 +16,11 @@ class ScreenCapture(socketserver.BaseRequestHandler):
         self.request.sendall(b"Content-type: multipart/x-mixed-replace; boundary=frame\r\n")
         self.request.sendall(b"\r\n")
 
-
+        while True:
+            scrnsht = pyautogui.screenshot()
+            BinImg = io.BytesIO()
+            scrnsht.save(BinImg, format='JPEG')
+            BinImg.seek(0)
 
 HOST = "0.0.0.0"
 PORT = 8000
