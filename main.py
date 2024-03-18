@@ -60,6 +60,8 @@ def start_function():
         thread = threading.Thread(target=start_server)
         thread.daemon = True
         thread.start()
+        httpServer = True
+        
 
 def stop_function():
     global httpServer
@@ -68,6 +70,7 @@ def stop_function():
     if httpServer:
         httpServer.shutdown()
         httpServer.server_close()
+        httpServer = False
 
 root = tk.Tk()
 root['pady'] = 100
