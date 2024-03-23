@@ -13,6 +13,7 @@ import pyautogui
 import io
 import socket
 import tkinter as tk
+import os
 
 class ScreenCapture(socketserver.BaseRequestHandler):
     is_running = True
@@ -37,10 +38,28 @@ class ScreenCapture(socketserver.BaseRequestHandler):
 
 def get_private_ip():
     private_ip = None
+
     try:
-        private_ip = socket.gethostbyname(socket.gethostname())
+        if os.name == "nt":
+            ip = os.popen("ipconfig").read()
+            for line in ip.split('\n'):
+                if 'IPv4' in line:
+                    line = line.split()
+                    idx = line.index(':')
+                    return line[idx+1]
+        
+        else:
+            ip = os.popen("ifconfig").read()
+
+            for line in ip.split('\n'):
+                line = line.split()
+                if 'inet' in line and '127.0.0.1' not in line:
+                    pv_ip = line[1]
+                    return pv_ip
+                    
     except:
         private_ip = 'Unable to get private IP address'
+
     return private_ip
 
 HOST = "0.0.0.0"
@@ -50,7 +69,7 @@ httpServer = None
 def start_server():
     global httpServer
     httpServer = socketserver.ThreadingTCPServer((HOST, PORT), ScreenCapture)
-    label.config(text=f"status: HTTP server ON\nUser can connect by {get_private_ip()}:{8000}")
+    label.config(text=f"status: HTTP server ON\nUser can connect by\n {get_private_ip()}:{8000}")
     httpServer.serve_forever()
 
 def start_function():
