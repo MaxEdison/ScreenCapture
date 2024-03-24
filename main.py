@@ -13,6 +13,7 @@ import pyautogui
 import io
 import socket
 import tkinter as tk
+from tkinter import font
 import os
 
 class ScreenCapture(socketserver.BaseRequestHandler):
@@ -67,7 +68,14 @@ httpServer = None
 def start_server():
     global httpServer
     httpServer = socketserver.ThreadingTCPServer((HOST, PORT), ScreenCapture)
-    label.config(text=f"status: HTTP server ON\nUser can connect by\n {get_private_ip()}:{8000}")
+    label.config(text=
+f"""
+Status: HTTP server ON
+
+Users can connect through the following IP: {get_private_ip()}:{8000}
+
+Please do not close the window!
+""")
     httpServer.serve_forever()
 
 def start_function():
@@ -83,25 +91,30 @@ def start_function():
 def stop_function():
     global httpServer
     ScreenCapture.is_running = False
-    label.config(text=f"status: HTTP server OFF")
+    label.config(text=f"Status: HTTP server OFF")
     if httpServer:
         httpServer.shutdown()
         httpServer.server_close()
         httpServer = False
 
 root = tk.Tk()
+root.configure()
 root['pady'] = 100
 root.title("SCREEN CAPTURE")
-root.geometry("300x500")
+root.geometry("400x500")
 root.resizable(False, False)
+label_font = font.Font(weight="bold")
 
-start_button = tk.Button(root, text="Start", command=start_function, width=20, height=5)
+
+start_button = tk.Button(root, text="Start", command=start_function, width=15,bg='#10AC84',fg='white', height=5, font=label_font)
 start_button.pack()
 
-stop_button = tk.Button(root, text="Stop", command=stop_function, width=20, height=5)
+
+stop_button = tk.Button(root, text="Stop", command=stop_function, width=15,bg='#EE5253',fg='white', height=5, font=label_font)
 stop_button.pack()
 
-label = tk.Label(root, text="")
+
+label = tk.Label(root)
 label.pack()
 
 root.mainloop()
