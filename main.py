@@ -49,13 +49,11 @@ def get_private_ip():
                     return line[idx+1]
         
         else:
-            ip = os.popen("ifconfig").read()
+            ip = os.popen("ip -o addr show | grep lan | awk '{print $2 , $4}'").read()
 
             for line in ip.split('\n'):
                 line = line.split()
-                if 'inet' in line and '127.0.0.1' not in line:
-                    pv_ip = line[1]
-                    return pv_ip
+                return line[1]
                     
     except:
         private_ip = 'Unable to get private IP address'
