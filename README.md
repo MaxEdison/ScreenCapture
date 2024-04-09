@@ -16,19 +16,19 @@ ScreenCapture is a simple Python application that allows you to share your scree
 1. Install Python 3:
 Download and Install Python 3 From [www.python.org](https://www.python.org/downloads/)<br >
 
-3. Clone the repository:
+2. Clone the repository:
 
 ```bash
 git clone https://github.com/MaxEdison/ScreenCapture
 ```
 
-2. Install the required dependencies:
+3. Install the required dependencies:
 Simply Run "windows-install.bat" to install all dependencies OR use this command:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the server:
+4. Run the server:
 Simply Run "windows-run.bat" OR use this command:
 
 ```bash
