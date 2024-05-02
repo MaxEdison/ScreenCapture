@@ -49,13 +49,11 @@ def get_private_ip():
                     return line[idx+1]
         
         else:
-            ip = os.popen("ifconfig").read()
+            ip = os.popen("ip -o addr show | grep lan | awk '{print $2 , $4}'").read()
 
             for line in ip.split('\n'):
                 line = line.split()
-                if 'inet' in line and '127.0.0.1' not in line:
-                    pv_ip = line[1]
-                    return pv_ip
+                return line[1]
                     
     except:
         private_ip = 'Unable to get private IP address'
@@ -91,7 +89,7 @@ def start_function():
 def stop_function():
     global httpServer
     ScreenCapture.is_running = False
-    label.config(text=f"status: HTTP server OFF")
+    label.config(text=f"Status: HTTP server OFF")
     if httpServer:
         httpServer.shutdown()
         httpServer.server_close()
@@ -101,6 +99,7 @@ root = tk.Tk()
 root.configure()
 root['pady'] = 100
 root.title("SCREEN CAPTURE")
+
 root.geometry("480x500")
 root.resizable(True, True)
 label_font = font.Font(weight="bold")
@@ -108,10 +107,12 @@ label_font = font.Font(weight="bold")
 start_button = tk.Button(root, text="Start", command=start_function, width=15,bg='#10AC84',fg='white', height=5, font=label_font)
 start_button.pack()
 
+
 stop_button = tk.Button(root, text="Stop", command=stop_function, width=15,bg='#EE5253',fg='white', height=5, font=label_font)
 stop_button.pack()
 
-label = tk.Label(root, text="")
+
+label = tk.Label(root)
 label.pack()
 
 root.mainloop()

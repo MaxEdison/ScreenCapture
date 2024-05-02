@@ -1,3 +1,5 @@
+
+
 # Screen Capture 🖥️ 📸
 
 ScreenCapture is a simple Python application that allows you to share your screen in local network over HTTP. It provides a convenient way to share your screen in real-time.
@@ -10,6 +12,39 @@ ScreenCapture is a simple Python application that allows you to share your scree
 -   **Customizable:** Easily customize the server settings such as host, port, and streaming intervals according to your requirements.
 
 ## Usage 🚀
+
+**Windows:**
+1. Install **Python 3**:
+Download and Install Python 3 From [www.python.org](https://www.python.org/downloads/)<br >
+
+2. Clone the repository:
+
+```bash
+git clone https://github.com/MaxEdison/ScreenCapture
+```
+
+3. Install the required dependencies:
+Simply Run "**windows-install.bat**" to install all dependencies OR use this command:
+```bash
+pip install -r requirements.txt
+```
+
+4. Run the server:
+Simply Run "**windows-run.bat**" OR use this command:
+
+```bash
+python main.py
+```
+
+Now clients can stream your screen by entering your machine IP address on **port 8000** (default port)
+
+You can find your IP address in local network by this command:
+
+```bash
+ipconfig
+```
+
+**Linux/MacOS:**
 
 1. Clone the repository:
 
@@ -29,17 +64,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Now clients can stream your screen by entering your machine IP address on port 8000 (default port)
+Now clients can stream your screen by entering your machine IP address on **port 8000** (default port)
 
 You can find your IP address in local network by this command:
-
-**Windows:**
-
-```bash
-ipconfig
-```
-
-**Linux/MacOS:**
 
 ```bash
 ifconfig
