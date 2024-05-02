@@ -6,7 +6,6 @@
 #                Screen Capture                   # 
 ###################################################
 
-
 import socketserver
 import threading
 import pyautogui
@@ -80,13 +79,12 @@ Please do not close the window!
 
 def start_function():
     global httpServer
-    if not httpServer:
+    if not httpServer:  # Change here
         ScreenCapture.is_running = True
         thread = threading.Thread(target=start_server)
         thread.daemon = True
         thread.start()
-        httpServer = True
-        
+        httpServer = True  # Change here
 
 def stop_function():
     global httpServer
@@ -95,16 +93,16 @@ def stop_function():
     if httpServer:
         httpServer.shutdown()
         httpServer.server_close()
-        httpServer = False
+        httpServer = None  # Change here
 
 root = tk.Tk()
 root.configure()
 root['pady'] = 100
 root.title("SCREEN CAPTURE")
-root.geometry("400x500")
-root.resizable(False, False)
-label_font = font.Font(weight="bold")
 
+root.geometry("480x500")
+root.resizable(True, True)
+label_font = font.Font(weight="bold")
 
 start_button = tk.Button(root, text="Start", command=start_function, width=15,bg='#10AC84',fg='white', height=5, font=label_font)
 start_button.pack()
