@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>ScreenCapture</title>
+<style>
+  @font-face { font-family:"Vazirmatn"; font-weight:400; font-display:swap; src:url(/fonts/Vazirmatn-Regular.woff2) format("woff2"); }
+  @font-face { font-family:"Vazirmatn"; font-weight:700; font-display:swap; src:url(/fonts/Vazirmatn-Bold.woff2) format("woff2"); }
+  :root { --accent:#6c5ce7; --ok:#00d68f; --warn:#ffb347; --bg:#000; --glass:rgba(18,22,36,.74); --text:#e8ecf8; --muted:#8a94b4; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); overflow:hidden; color:var(--text);
+    font:15px/1.4 "Vazirmatn", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; touch-action:manipulation; user-select:none; }
+  #stage { position:absolute; left:0; top:0; width:0; height:0; }
+  canvas { width:100%; height:100%; display:block; }
+  #cursor { position:absolute; width:22px; height:22px; pointer-events:none; display:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.7)); }
+  #bar { position:fixed; top:max(10px,env(safe-area-inset-top)); left:50%; transform:translate(-50%,0);
+    display:flex; flex-wrap:wrap; justify-content:center; gap:4px; padding:5px; max-width:96vw; border-radius:16px;
+    background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    transition:opacity .25s, transform .25s; z-index:5; }
+  #bar.hide { opacity:0; transform:translate(-50%,-20px); pointer-events:none; }
+  #bar button { all:unset; cursor:pointer; padding:8px 12px; border-radius:11px; font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; }
+  #bar button:hover, #bar button:active { background:rgba(255,255,255,.14); }
+  #bar button.on { background:var(--accent); }
+  #stats { position:fixed; left:max(10px,env(safe-area-inset-left)); bottom:max(10px,env(safe-area-inset-bottom));
+    padding:7px 11px; border-radius:11px; background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    font:600 12px/1.3 ui-monospace,Consolas,monospace; direction:ltr; display:none; z-index:5; }
+  #stats i { font-style:normal; color:var(--ok); }
+  #overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:radial-gradient(circle at 50% 35%, #1a2040, #070914 70%); z-index:10; text-align:center; padding:24px; }
+  #overlay.gone { display:none; }
+  #paused { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); padding:12px 22px; border-radius:14px;
+    background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); font-weight:700; font-size:18px;
+    color:var(--warn); display:none; z-index:4; }
+  .spin { width:46px; height:46px; border-radius:50%; border:4px solid rgba(255,255,255,.12); border-top-color:var(--accent); animation:s .9s linear infinite; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  #msg { font-size:19px; font-weight:700; }
+  #sub { color:var(--muted); font-size:13px; max-width:320px; }
+  #pinbox { display:none; gap:8px; }
+  #pinbox input { width:150px; padding:11px 14px; border-radius:11px; border:1px solid #2b3354; background:#10152a; color:var(--text);
+    font-size:18px; text-align:center; letter-spacing:4px; outline:none; user-select:text; direction:ltr; }
+  #pinbox button { padding:11px 18px; border-radius:11px; border:0; background:var(--accent); color:#fff; font:700 15px "Vazirmatn", sans-serif; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas>
+  <svg id="cursor" viewBox="0 0 24 24"><path d="M3 2l7.5 19 2.7-7.8L21 10.5z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="bar" class="hide">
+  <button id="bFit"></button>
+  <button id="bQual"></button>
+  <button id="bShot"></button>
+  <button id="bStats"></button>
+  <button id="bFull"></button>
+  <button id="bLang"></button>
+</div>
+<div id="stats"></div>
+<div id="paused"></div>
+
+<div id="overlay">
+  <div class="spin" id="spin"></div>
+  <div id="msg"></div>
+  <div id="sub"></div>
+  <form id="pinbox"><input id="pin" type="tel" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="12"><button id="pinBtn"></button></form>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), stage = $('stage'), cursor = $('cursor'), bar = $('bar'), statsEl = $('stats');
+  const ctx = cv.getContext('2d', { alpha:false, desynchronized:true });
+  const store = { get:k => { try { return localStorage.getItem(k); } catch { return null; } },
+                  set:(k,v) => { try { localStorage.setItem(k,v); } catch {} } };
+
+  // ---------- translations
+  const T = {
+    en: { fit:'Fit', fill:'Fill', quality:'Quality', auto:'Auto', shot:'Photo', stats:'Stats', full:'Fullscreen',
+          connecting:'Connecting…', connectingSub:'Make sure this device is on the same Wi‑Fi / modem as the computer.',
+          waiting:'Waiting for the computer…', waitingSub:'Is ScreenCapture running and started?',
+          reconnecting:'Reconnecting…', lost:'Connection lost.', pinAsk:'This screen is protected', pinBad:'Wrong PIN',
+          pinSub:'Enter the PIN shown on the computer.', open:'Open', paused:'Sharing is paused', ping:'ping', lang:'فارسی' },
+    fa: { fit:'متناسب', fill:'پر کردن', quality:'کیفیت', auto:'خودکار', shot:'عکس', stats:'آمار', full:'تمام‌صفحه',
+          connecting:'در حال اتصال…', connectingSub:'مطمئن شوید این دستگاه به همان Wi‑Fi / مودم کامپیوتر وصل است.',
+          waiting:'در انتظار کامپیوتر…', waitingSub:'آیا برنامه‌ی ScreenCapture اجرا و شروع شده است؟',
+          reconnecting:'اتصال مجدد…', lost:'ارتباط قطع شد.', pinAsk:'این صفحه رمز دارد', pinBad:'رمز اشتباه است',
+          pinSub:'رمزی را که روی کامپیوتر نمایش داده شده وارد کنید.', open:'باز کردن', paused:'اشتراک متوقف شده است', ping:'پینگ', lang:'English' },
+  };
+  let lang = store.get('sc_lang') || (/^fa/i.test(navigator.language) ? 'fa' : 'en');
+  const t = k => T[lang][k];
+
+  // ---------- state
+  let ws, pin = new URLSearchParams(location.search).get('pin') || store.get('sc_pin') || '', retry = null;
+  let fw = 0, fh = 0, shown = 0, frames = 0, bytes = 0, rtt = 0, decMs = 0, decN = 0;
+  let fitMode = store.get('sc_fit') || 'fit';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || matchMedia('(pointer:coarse)').matches;
+  const LEVELS = [960, 1280, 1600, 1920];                      // auto-quality ladder (max frame width)
+  let qualMode = store.get('sc_q') || 'auto';                  // 'auto' or a fixed width
+  let level = isMobile ? 1 : 3, ceiling = 3, goodFor = 0;      // phones start at 1280, PCs at 1920
+  const curWidth = () => qualMode === 'auto' ? LEVELS[level] : parseInt(qualMode, 10);
+
+  function sendWidth() { if (ws && ws.readyState === 1) ws.send('w' + curWidth()); }
+
+  // ---------- texts
+  function applyLang() {
+    document.documentElement.lang = lang; document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+    $('bStats').textContent = t('stats'); $('bFull').textContent = t('full'); $('bShot').textContent = t('shot');
+    $('bLang').textContent = t('lang'); $('pinBtn').textContent = t('open'); $('paused').textContent = t('paused');
+    updateButtons();
+  }
+  function updateButtons() {
+    $('bFit').textContent = fitMode === 'fill' ? t('fill') : t('fit');
+    $('bQual').textContent = t('quality') + ': ' + (qualMode === 'auto' ? t('auto') + ' · ' + LEVELS[level] : qualMode);
+  }
+  $('bLang').onclick = () => { lang = lang === 'fa' ? 'en' : 'fa'; store.set('sc_lang', lang); applyLang(); showBar(); };
+
+  // ---------- layout
+  function layout() {
+    if (!fw) return;
+    const W = innerWidth, H = innerHeight;
+    const s = fitMode === 'fill' ? Math.max(W/fw, H/fh) : Math.min(W/fw, H/fh);
+    const w = fw*s, h = fh*s;
+    Object.assign(stage.style, { width:w+'px', height:h+'px', left:(W-w)/2+'px', top:(H-h)/2+'px' });
+  }
+  addEventListener('resize', layout);
+
+  function draw(img) {                    // the server only ever sends the newest frame: just paint it
+    if (cv.width !== img.width || cv.height !== img.height) { cv.width = img.width; cv.height = img.height; }
+    ctx.drawImage(img, 0, 0);
+    img.close(); frames++;
+  }
+
+  // ---------- connection
+  function status(msg, sub, spin = true) {
+    $('overlay').classList.remove('gone'); $('msg').textContent = msg; $('sub').textContent = sub || '';
+    $('spin').style.display = spin ? '' : 'none'; $('pinbox').style.display = 'none';
+  }
+
+  async function connect() {
+    clearTimeout(retry);
+    try {
+      const info = await (await fetch('/info', { cache:'no-store' })).json();
+      if (info.pin_required && !(await fetch('/check?pin=' + encodeURIComponent(pin), { cache:'no-store' })).ok) {
+        status(pin ? t('pinBad') : t('pinAsk'), t('pinSub'), false);
+        $('pinbox').style.display = 'flex'; $('pin').value = ''; $('pin').focus(); return;
+      }
+    } catch { status(t('waiting'), t('waitingSub')); retry = setTimeout(connect, 1500); return; }
+
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws?pin=' + encodeURIComponent(pin));
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => { $('overlay').classList.add('gone'); shown = 0; sendWidth(); ping(); };
+    ws.onclose = () => { $('paused').style.display = 'none'; status(t('reconnecting'), t('lost')); retry = setTimeout(connect, 800); };
+    ws.onmessage = onMessage;
+  }
+  $('pinbox').onsubmit = e => { e.preventDefault(); pin = $('pin').value.trim(); store.set('sc_pin', pin); status(t('connecting'), t('connectingSub')); connect(); };
+
+  async function onMessage(e) {
+    if (typeof e.data === 'string') {
+      if (e.data[0] === '{') {
+        const m = JSON.parse(e.data);
+        if (m.t === 'c') { cursor.style.display = m.v ? 'block' : 'none';
+          cursor.style.left = (m.x*100) + '%'; cursor.style.top = (m.y*100) + '%'; }
+        else if (m.t === 's') { $('paused').style.display = m.paused ? 'block' : 'none'; }
+      } else if (e.data[0] === 'p') { rtt = performance.now() - parseFloat(e.data.slice(1)); }
+      return;
+    }
+    const dv = new DataView(e.data), seq = dv.getUint32(0, true), w = dv.getUint16(4, true), h = dv.getUint16(6, true);
+    bytes += e.data.byteLength;
+    const t0 = performance.now();
+    let img = null;
+    try { img = await createImageBitmap(new Blob([new Uint8Array(e.data, 8)], { type:'image/jpeg' })); } catch {}
+    decMs += performance.now() - t0; decN++;
+    if (ws.readyState === 1) ws.send('a');                    // ACK: the server may send the next frame
+    if (!img) return;
+    if (seq < shown && shown - seq < 1e6) { img.close(); return; }   // out-of-order guard
+    shown = seq;
+    if (w !== fw || h !== fh) { fw = w; fh = h; layout(); }
+    draw(img);
+  }
+
+  function ping() { if (ws && ws.readyState === 1) ws.send('p' + performance.now()); }
+  setInterval(ping, 1000);
+
+  // ---------- once a second: stats + automatic quality ladder
+  setInterval(() => {
+    const dec = decN ? decMs / decN : 0;
+    statsEl.innerHTML = `${fw}×${fh} · <i>${frames} fps</i> · ${(bytes*8/1e6).toFixed(1)} Mbps · ${t('ping')} ${Math.round(rtt)} ms · dec ${dec.toFixed(0)} ms`;
+    if (qualMode === 'auto' && decN >= 3) {
+      if ((dec > 22 || rtt > 70) && level > 0) {              // this device / the link cannot keep up: go smaller
+        ceiling = Math.min(ceiling, level - 1); level--; goodFor = 0; sendWidth(); updateButtons();
+      } else if (dec < 9 && rtt < 25 && level < ceiling) {      // plenty of headroom: creep back up
+        if (++goodFor >= 8) { level++; goodFor = 0; sendWidth(); updateButtons(); }
+      } else goodFor = 0;
+    }
+    frames = 0; bytes = 0; decMs = 0; decN = 0;
+  }, 1000);
+
+  // ---------- toolbar
+  let hideT;
+  function showBar() { bar.classList.remove('hide'); clearTimeout(hideT); hideT = setTimeout(() => bar.classList.add('hide'), 3500); }
+  addEventListener('pointermove', showBar);
+  addEventListener('pointerdown', () => bar.classList.contains('hide') ? showBar() : null);
+  $('bFit').onclick = () => { fitMode = fitMode === 'fit' ? 'fill' : 'fit'; store.set('sc_fit', fitMode); layout(); updateButtons(); showBar(); };
+  $('bQual').onclick = () => {
+    const order = ['auto', '960', '1280', '1920'];
+    qualMode = order[(order.indexOf(qualMode) + 1) % order.length]; store.set('sc_q', qualMode);
+    sendWidth(); updateButtons(); showBar();
+  };
+  $('bStats').onclick = e => { const on = statsEl.style.display !== 'block'; statsEl.style.display = on ? 'block' : 'none';
+    e.target.classList.toggle('on', on); store.set('sc_stats', on ? '1' : '0'); showBar(); };
+  $('bShot').onclick = () => cv.toBlob(b => {
+    if (!b) return; const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = 'screen-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.png';
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  });
+  const root = document.documentElement;
+  if (!(root.requestFullscreen || root.webkitRequestFullscreen)) $('bFull').style.display = 'none';
+  $('bFull').onclick = () => {
+    const el = document.fullscreenElement || document.webkitFullscreenElement;
+    if (el) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+  };
+
+  applyLang();
+  status(t('connecting'), t('connectingSub'));
+  if (store.get('sc_stats') === '1') $('bStats').click();
+  showBar();
+  connect();
+})();
+</script>
+</body>
+</html>
