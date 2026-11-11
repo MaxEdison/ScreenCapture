@@ -1,4 +1,3 @@
 @echo off
-echo Running server...
-python main.py
-pause
+cd /d "%~dp0"
+start "" pythonw main.py
